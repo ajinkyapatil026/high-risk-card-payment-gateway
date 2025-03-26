@@ -90,3 +90,5 @@ Released under **GPLv3**. See [LICENSE](http://www.gnu.org/licenses/gpl-3.0.html
 - **[Guide to Fix Payout Wallet Address Errors](https://shieldclimb.com/blog/troubleshooting-payout-wallet-address-error/)** – Troubleshooting guide.
 - **[ShieldClimb Terms of Service](https://shieldclimb.com/terms-of-service/)** – Read our service policies.
 - **[Privacy Policy](https://shieldclimb.com/privacy-policy/)** – How we handle user data.
+- **[Crypto Payment Gateway](https://shieldclimb.com/crypto-payment-gateway/)** – Secure and seamless crypto payment gateway for fast, global transactions with low fees. 
+- **[ShieldClimb Free Woocommerce Plugins](https://shieldclimb.com/free-woocommerce-plugins/)** – Explore more free plugins.
