@@ -1,12 +1,15 @@
 # ShieldClimb – Card Payment Gateway with Instant Payouts and Chargeback Protection
 
-![ShieldClimb Logo](https://shieldclimb.com/wp-content/uploads/2025/03/ShieldClimb-logo-with-name-500x200-1.png)
+<p align="left">
+  <img src="https://shieldclimb.com/wp-content/uploads/2025/03/ShieldClimb-logo-with-name-500x200-1.png" alt="Brand Logo" width="120"><br>
+  <img src="https://shieldclimb.com/wp-content/uploads/2025/03/High-Risk-Card-Payment-Gateway-Compressed.png" alt="Product Logo" width="120">
+</p>
 
 [![WooCommerce Compatibility](https://img.shields.io/badge/WooCommerce-5.8+-blue)](https://woocommerce.com/)
 [![License](https://img.shields.io/badge/License-GPLv3-blue)](http://www.gnu.org/licenses/gpl-3.0.html)
 [![PHP Version](https://img.shields.io/badge/PHP-7.2+-blue)](https://www.php.net/)
 
-ShieldClimb's **[High-Risk Payment Gateway](https://shieldclimb.com/high-risk-card-payment-gateway/)** enables instant payouts to your USDC (Polygon) wallet while offering full chargeback protection. Accept **Visa, Mastercard, Amex, Google Pay, and Apple Pay** seamlessly.
+ShieldClimb's **[High-Risk Card Payment Gateway](https://shieldclimb.com/high-risk-card-payment-gateway/)** enables instant payouts to your USDC (Polygon) wallet while offering full chargeback protection. Accept **Visa, Mastercard, Amex, Google Pay, and Apple Pay** seamlessly.
 
 ## 🚀 Quick Start
 
