@@ -1,32 +1,46 @@
 <?php
-
 add_filter('woocommerce_available_payment_gateways', 'show_hide_payment_methods');
 add_filter('woocommerce_available_payment_gateways', 'show_payment_gateway_for_us_ip_customers');
 
 function show_hide_payment_methods($available_gateways) {
-    if (!is_checkout()) {
+    if (!is_checkout() && !is_wc_endpoint_url('order-pay')) {
         return $available_gateways;
     }
-    
+
     // Get the current WooCommerce currency
     $currency = get_woocommerce_currency();
 
-    // Fetch the exchange rate from the Frankfurter API
-    $response = wp_remote_get('https://api.frankfurter.app/latest?from=' . $currency . '&to=USD');
-    $rate = 1; // Default rate if API fails
-
-    if (!is_wp_error($response)) {
-        $data = json_decode(wp_remote_retrieve_body($response), true);
-        if (isset($data['rates']['USD'])) {
-            $rate = $data['rates']['USD']; // USD rate
+    // Fetch the exchange rate from the Frankfurter API with caching
+    $rate = get_transient('frankfurter_exchange_rate_' . $currency);
+    if ($rate === false) {
+        $response = wp_remote_get('https://api.frankfurter.app/latest?from=' . $currency . '&to=USD');
+        if (!is_wp_error($response)) {
+            $data = json_decode(wp_remote_retrieve_body($response), true);
+            if (isset($data['rates']['USD'])) {
+                $rate = $data['rates']['USD'];
+                set_transient('frankfurter_exchange_rate_' . $currency, $rate, HOUR_IN_SECONDS);
+            }
         }
     }
+    $rate = $rate ?: 1; // Default rate
 
-    // Convert cart total to USD
-    $cart_total_in_usd = WC()->cart->total * $rate;
+    // Determine the total (cart total for checkout, order total for order-pay)
+    if (is_wc_endpoint_url('order-pay')) {
+        global $wp;
+        $order_id = absint($wp->query_vars['order-pay']);
+        $order = wc_get_order($order_id);
+        if (!$order || !$order->needs_payment()) {
+            return $available_gateways; // Skip if order doesn't require payment
+        }
+        $order_total = $order->get_total();
+    } else {
+        $order_total = WC()->cart->total;
+    }
+
+    $cart_total_in_usd = $order_total * $rate;
 
     // Payment gateway restrictions based on USD total
-    $gateway_conditions = [ 
+    $gateway_conditions = [
         'shieldclimb-werteur' => 1.09,
         'shieldclimb-stripe' => 1.09,
         'shieldclimb-coinbase' => 2,
@@ -57,21 +71,20 @@ function show_hide_payment_methods($available_gateways) {
 }
 
 function show_payment_gateway_for_us_ip_customers($available_gateways) {
-    if (!is_checkout() || is_admin()) {
+    if ((!is_checkout() && !is_wc_endpoint_url('order-pay')) || is_admin()) {
         return $available_gateways;
     }
-    
+
     // Get the user's country based on IP address
     $user_country = WC_Geolocation::geolocate_ip();
-    
+
     if (isset($user_country['country']) && $user_country['country'] !== 'US') {
-        // List of payment gateways you want to remove for non-US IP addresses
+        // List of payment gateways to remove for non-US customers
         unset($available_gateways['shieldclimb-stripe']);
         unset($available_gateways['shieldclimb-robinhood']);
-        // Add more unset() calls here for additional payment gateways if needed
+        // Add more unset() calls here if needed
     }
 
     return $available_gateways;
 }
-
 ?>

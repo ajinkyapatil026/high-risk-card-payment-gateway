@@ -62,6 +62,9 @@ Anyone can use our plugin, but businesses listed in our **[Prohibited Business L
 
 ## 📜 Changelog
 
+### v1.2.1
+- Fixed: Payment options not appearing on the "Pay for Order" page.
+
 ### v1.2.0
 - Automatically hide Stripe and Robinhood payment methods if the buyer is not from the US, as these options only support the US region.
 
