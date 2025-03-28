@@ -1,8 +1,8 @@
 <?php
-add_filter('woocommerce_available_payment_gateways', 'show_hide_payment_methods');
-add_filter('woocommerce_available_payment_gateways', 'show_payment_gateway_for_us_ip_customers');
+add_filter('woocommerce_available_payment_gateways', 'shieldclimbgateway_hide_payment_methods');
+add_filter('woocommerce_available_payment_gateways', 'shieldclimbgateway_payment_gateway_for_us_ip_customers');
 
-function show_hide_payment_methods($available_gateways) {
+function shieldclimbgateway_hide_payment_methods($available_gateways) {
     if (!is_checkout() && !is_wc_endpoint_url('order-pay')) {
         return $available_gateways;
     }
@@ -11,14 +11,14 @@ function show_hide_payment_methods($available_gateways) {
     $currency = get_woocommerce_currency();
 
     // Fetch the exchange rate from the Frankfurter API with caching
-    $rate = get_transient('frankfurter_exchange_rate_' . $currency);
+    $rate = get_transient('shieldclimbgateway_exchange_rate_' . $currency);
     if ($rate === false) {
-        $response = wp_remote_get('https://api.frankfurter.app/latest?from=' . $currency . '&to=USD');
+        $response = wp_remote_get('https://api.frankfurter.dev/latest?from=' . $currency . '&to=USD');
         if (!is_wp_error($response)) {
             $data = json_decode(wp_remote_retrieve_body($response), true);
             if (isset($data['rates']['USD'])) {
                 $rate = $data['rates']['USD'];
-                set_transient('frankfurter_exchange_rate_' . $currency, $rate, HOUR_IN_SECONDS);
+                set_transient('shieldclimbgateway_exchange_rate_' . $currency, $rate, HOUR_IN_SECONDS);
             }
         }
     }
@@ -70,7 +70,7 @@ function show_hide_payment_methods($available_gateways) {
     return $available_gateways;
 }
 
-function show_payment_gateway_for_us_ip_customers($available_gateways) {
+function shieldclimbgateway_payment_gateway_for_us_ip_customers($available_gateways) {
     if ((!is_checkout() && !is_wc_endpoint_url('order-pay')) || is_admin()) {
         return $available_gateways;
     }

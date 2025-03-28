@@ -3,7 +3,7 @@ Contributors: shieldclimb
 Donate link: https://shieldclimb.com/
 Tags: payment gateway, high-risk payment, instant payout, credit card, chargeback protection
 Requires at least: 5.8
-Tested up to: 6.7.2
+Tested up to: 6.7
 Stable tag: 1.2.1
 Requires PHP: 7.2
 WC requires at least: 5.8
@@ -33,9 +33,25 @@ Card Payment Gateway with Instant Payouts to your USDC wallet and Chargeback Pro
 * Custom Payment Icons Per Provider
 * Multi-Currency Support
 
-The plugin and offered service through [shieldclimb.com Instant Payment Gateway API](https://shieldclimb.com/) is subject to the [service terms](https://shieldclimb.com/terms-of-service/) and [Privacy Policy](https://shieldclimb.com/privacy-policy/).
+* The plugin and offered service through [shieldclimb.com Instant Payment Gateway API](https://shieldclimb.com/) is subject to the [service terms](https://shieldclimb.com/terms-of-service/) and [Privacy Policy](https://shieldclimb.com/privacy-policy/).
 
-== Installation ==
+== Frankfurter API - Third-Party Service Documentation ==
+
+This plugin integrates the [Frankfurter API](https://frankfurter.dev/) to fetch exchange rates for determining when to hide payment options below a minimum threshold.
+
+= Terms of Service & Privacy Policy =
+
+* The Frankfurter API does not have official Terms of Service or a standalone Privacy Policy.
+* According to their website, the API does not collect personal data, but it runs behind Cloudflare for performance, which may collect basic analytics data.
+* More details can be found on their website: https://frankfurter.dev/
+
+= Data Usage & Processing =
+
+* This plugin does not send any personal user data to the [Frankfurter API](https://frankfurter.dev/).
+* Only currency codes and requested exchange rates are sent in API requests.
+* All data comes from the European Central Bank, and the API provides it as-is.
+
+== Installation== 
 
 * After installing and activating this plugin go to WooCommerce > Settings > Payments > shieldclimb Payments gateway
 * Activate the desired payment provider gateway and insert your USDC (Polygon) wallet address to receive instant payouts.

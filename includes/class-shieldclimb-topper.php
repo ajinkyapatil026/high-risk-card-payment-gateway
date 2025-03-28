@@ -3,9 +3,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-add_action('plugins_loaded', 'init_shieldclimbgateway_topper_gateway');
+add_action('plugins_loaded', 'shieldclimbgateway_topper_gateway');
 
-function init_shieldclimbgateway_topper_gateway() {
+function shieldclimbgateway_topper_gateway() {
     if (!class_exists('WC_Payment_Gateway')) {
         return;
     }
@@ -190,52 +190,83 @@ function shieldclimb_add_instant_payment_gateway_topper($gateways) {
 add_filter('woocommerce_payment_gateways', 'shieldclimb_add_instant_payment_gateway_topper');
 }
 
-// Add custom endpoint for changing order status
-function shieldclimbgateway_topperpaycom_change_order_status_rest_endpoint() {
-    // Register custom route
-    register_rest_route( 'shieldclimbgateway/v1', '/shieldclimbgateway-topperpaycom/', array(
-        'methods'  => 'GET',
-        'callback' => 'shieldclimbgateway_topperpaycom_change_order_status_callback',
-        'permission_callback' => '__return_true',
-    ));
+// // Custom permission callback for the REST endpoint
+function shieldclimbgateway_topperpaycom_permission_callback($request) {
+    $order_id = absint($request->get_param('order_id'));
+    $nonce = sanitize_text_field($request->get_param('nonce'));
+
+    // Check for missing parameters
+    if (empty($order_id) || empty($nonce)) {
+        return new WP_Error(
+            'rest_forbidden',
+            __('Missing order or nonce parameter.', 'shieldclimb-high-risk-card-payment-gateway'),
+            array('status' => 403)
+        );
+    }
+
+    // Retrieve the order
+    $order = wc_get_order($order_id);
+    if (!$order) {
+        return new WP_Error(
+            'rest_forbidden',
+            __('Order not found.', 'shieldclimb-high-risk-card-payment-gateway'),
+            array('status' => 404)
+        );
+    }
+
+    // Validate the nonce stored in order meta
+    if ($order->get_meta('shieldclimb_topperpaycom_nonce', true) !== $nonce) {
+        return new WP_Error(
+            'rest_forbidden',
+            __('Invalid nonce.', 'shieldclimb-high-risk-card-payment-gateway'),
+            array('status' => 403)
+        );
+    }
+
+    return true;
 }
-add_action( 'rest_api_init', 'shieldclimbgateway_topperpaycom_change_order_status_rest_endpoint' );
 
-// Callback function to change order status
-function shieldclimbgateway_topperpaycom_change_order_status_callback( $request ) {
-    $order_id = absint($request->get_param( 'order_id' ));
-	$shieldclimbgateway_topperpaycomgetnonce = sanitize_text_field($request->get_param( 'nonce' ));
-	$shieldclimbgateway_topperpaycompaid_txid_out = sanitize_text_field($request->get_param('txid_out'));
+// Register custom endpoint with permission callback
+function shieldclimbgateway_topperpaycom_change_order_status_rest_endpoint() {
+    register_rest_route(
+        'shieldclimbgateway/v1',
+        '/shieldclimbgateway-topperpaycom/',
+        array(
+            'methods'             => 'GET',
+            'callback'            => 'shieldclimbgateway_topperpaycom_change_order_status_callback',
+            'permission_callback' => 'shieldclimbgateway_topperpaycom_permission_callback',
+        )
+    );
+}
+add_action('rest_api_init', 'shieldclimbgateway_topperpaycom_change_order_status_rest_endpoint');
 
-    // Check if order ID parameter exists
-    if ( empty( $order_id ) ) {
-        return new WP_Error( 'missing_order_id', __( 'Order ID parameter is missing.', 'shieldclimb-high-risk-card-payment-gateway' ), array( 'status' => 400 ) );
+// Simplified callback function
+function shieldclimbgateway_topperpaycom_change_order_status_callback($request) {
+    $order_id = absint($request->get_param('order_id'));
+    $order = wc_get_order($order_id);
+    
+    $shieldclimbgateway_topperpaycompaid_txid_out = sanitize_text_field($request->get_param('txid_out'));
+    $shieldclimbgateway_topperpaycompaid_value_coin = sanitize_text_field($request->get_param('value_coin'));
+    $shieldclimbgateway_topperpaycomfloatpaid_value_coin = (float)$shieldclimbgateway_topperpaycompaid_value_coin;
+
+    // Check order status and payment method
+    if ($order->get_status() !== 'processing' && $order->get_status() !== 'completed' && 'shieldclimb-topper' === $order->get_payment_method()) {
+        $shieldclimbgateway_topperpaycomexpected_amount = (float)$order->get_meta('shieldclimb_topperpaycom_expected_amount', true);
+        $shieldclimbgateway_topperpaycomthreshold = 0.60 * $shieldclimbgateway_topperpaycomexpected_amount;
+
+        if ($shieldclimbgateway_topperpaycomfloatpaid_value_coin < $shieldclimbgateway_topperpaycomthreshold) {
+            $order->update_status('failed', __('Payment received is less than 60% of the order total. Customer may have changed the payment values on the checkout page.', 'shieldclimb-high-risk-card-payment-gateway'));
+            /* translators: %1$s: Transaction ID from payment gateway */
+            $order->add_order_note(sprintf(__('Order marked as failed: Payment received is less than 60%% of the order total. Customer may have changed the payment values on the checkout page. TXID: %1$s', 'shieldclimb-high-risk-card-payment-gateway'), $shieldclimbgateway_topperpaycompaid_txid_out));
+            return array('message' => 'Order status changed to failed due to partial payment.');
+        } else {
+            $order->payment_complete();
+            /* translators: %1$s: Transaction ID from payment gateway */
+            $order->add_order_note(sprintf(__('Payment completed by the provider TXID: %1$s', 'shieldclimb-high-risk-card-payment-gateway'), $shieldclimbgateway_topperpaycompaid_txid_out));
+            return array('message' => 'Order marked as paid and status changed.');
+        }
     }
 
-    // Get order object
-    $order = wc_get_order( $order_id );
-
-    // Check if order exists
-    if ( ! $order ) {
-        return new WP_Error( 'invalid_order', __( 'Invalid order ID.', 'shieldclimb-high-risk-card-payment-gateway' ), array( 'status' => 404 ) );
-    }
-	
-	// Verify nonce
-    if ( empty( $shieldclimbgateway_topperpaycomgetnonce ) || $order->get_meta('shieldclimb_topperpaycom_nonce', true) !== $shieldclimbgateway_topperpaycomgetnonce ) {
-        return new WP_Error( 'invalid_nonce', __( 'Invalid nonce.', 'shieldclimb-high-risk-card-payment-gateway' ), array( 'status' => 403 ) );
-    }
-
-    // Check if the order is pending and payment method is 'shieldclimb-topper'
-    if ( $order && $order->get_status() !== 'processing' && $order->get_status() !== 'completed' && 'shieldclimb-topper' === $order->get_payment_method() ) {
-        // Change order status to processing
-		$order->payment_complete();
-		/* translators: 1: Transaction ID */
-		$order->add_order_note( sprintf(__('Payment completed by the provider TXID: %1$s', 'shieldclimb-high-risk-card-payment-gateway'), $shieldclimbgateway_topperpaycompaid_txid_out) );
-        // Return success response
-        return array( 'message' => 'Order marked as paid and status changed.' );
-    } else {
-        // Return error response if conditions are not met
-        return new WP_Error( 'order_not_eligible', __( 'Order is not eligible for status change.', 'shieldclimb-high-risk-card-payment-gateway' ), array( 'status' => 400 ) );
-    }
+    return new WP_Error('order_not_eligible', __('Order is not eligible for status change.', 'shieldclimb-high-risk-card-payment-gateway'), array('status' => 400));
 }
 ?>
